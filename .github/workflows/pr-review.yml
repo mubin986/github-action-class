@@ -1,0 +1,43 @@
+name: PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# contents:read to fetch the diff, pull-requests:write so Claude can post its
+# review comment, id-token:write for the action's OIDC auth.
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so Claude can diff the PR branch against the base.
+          fetch-depth: 0
+
+      - name: Claude PR Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Review the pull request in this repository (PR #${{ github.event.pull_request.number }}).
+
+            Do the following and post ONE summary comment on the PR:
+            1. Explain in plain language what this PR changes and what you understand its intent to be.
+            2. Call out bugs, risks, security issues, and style problems. Reference specific files/lines.
+            3. End with a clear merge recommendation on its own line, one of exactly:
+               - "Recommendation: MERGE" (safe to merge)
+               - "Recommendation: DO NOT MERGE" (blocking issues found)
+               - "Recommendation: MERGE WITH CHANGES" (minor issues, fix first)
+               Give a one-sentence reason for the recommendation.
+
+            Use `gh pr comment ${{ github.event.pull_request.number }}` to post the comment.
+          claude_args: |
+            --allowedTools "Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Read,Grep,Glob"
