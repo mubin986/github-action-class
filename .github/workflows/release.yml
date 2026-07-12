@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+# Needed so the action can push the version bump / changelog commit and tag,
+# and so the release step can create a GitHub release.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history required for changelog generation.
+          fetch-depth: 0
+
+      - name: Conventional Changelog Action
+        id: changelog
+        uses: TriPSs/conventional-changelog-action@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Bumps "version" in package.json based on conventional commits.
+          version-file: './package.json'
+          git-message: 'chore(release): {version}'
+          tag-prefix: 'v'
+          output-file: 'CHANGELOG.md'
+          release-count: '10'
+          skip-on-empty: 'true'
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        if: ${{ steps.changelog.outputs.skipped == 'false' }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          tag_name: ${{ steps.changelog.outputs.tag }}
+          name: ${{ steps.changelog.outputs.tag }}
+          body: ${{ steps.changelog.outputs.clean_changelog }}
