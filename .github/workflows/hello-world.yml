@@ -1,0 +1,13 @@
+name: Hello World
+
+on:
+  push: [main]
+  workflow_dispatch:
+
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print hello world
+        run: echo "Hello, World!"
+      - run: echo "This is our first class on github actions!"
